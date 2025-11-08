@@ -13,18 +13,22 @@
   <div class="row justify-content-center">
     <div class="col-md-6">
       <div class="card shadow">
-        <div class="card-header bg-warning text-dark"><h4>Password Reset</h4></div>
+        <div class="card-header bg-warning text-dark text-center"><h4>Password Reset</h4></div>
         <div class="card-body">
+
+          <!-- Step 1: Request OTP -->
           <form id="step1">
             <div class="mb-3"><input type="email" class="form-control" placeholder="Your email" id="email" required></div>
             <button type="submit" class="btn btn-warning w-100">Send OTP</button>
           </form>
 
+          <!-- Step 2: Enter OTP + New Password -->
           <form id="step2" class="d-none mt-4">
             <div class="mb-3"><input type="text" class="form-control" placeholder="OTP (6 digits)" id="otp" maxlength="6" required></div>
             <div class="mb-3"><input type="password" class="form-control" placeholder="New password" id="newPwd" required></div>
             <button type="submit" class="btn btn-success w-100">Reset Password</button>
           </form>
+
         </div>
       </div>
     </div>
@@ -32,33 +36,47 @@
 </div>
 
 <script>
-  const api = { /* same as above */ };
-  const emailInput = document.getElementById('email');
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxikiNIi81cPsekdg_z8yClvwGQbp92z-AMQrNixtw-yK1KN6ZUSyVAc_i-IUoMf4MQ2Q/exec';
   let currentEmail = '';
 
-  document.getElementById('step1').addEventListener('submit', async e=>{
+  async function api(action, data) {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action, ...data }),
+      headers: { 'Content-Type': 'text/plain' }
+    });
+    return resp.json();
+  }
+
+  document.getElementById('step1').onsubmit = async e => {
     e.preventDefault();
-    currentEmail = emailInput.value.trim();
-    try{
-      const r = await api.requestOtp(currentEmail);
-      Swal.fire('OTP Sent', r.msg, 'info');
+    currentEmail = document.getElementById('email').value.trim();
+    try {
+      const res = await api('requestOtp', { email: currentEmail });
+      if (res.error) throw res.error;
+      Swal.fire('OTP Sent', res.msg, 'info');
       document.getElementById('step1').classList.add('d-none');
       document.getElementById('step2').classList.remove('d-none');
-    }catch(err){ Swal.fire('Error', err, 'error'); }
-  });
+    } catch (err) {
+      Swal.fire('Error', err, 'error');
+    }
+  };
 
-  document.getElementById('step2').addEventListener('submit', async e=>{
+  document.getElementById('step2').onsubmit = async e => {
     e.preventDefault();
-    const data = {
+    const payload = {
       email: currentEmail,
       otp: document.getElementById('otp').value.trim(),
       newPassword: document.getElementById('newPwd').value
     };
-    try{
-      const r = await api.verifyOtp(data);
-      Swal.fire('Success', r.msg, 'success').then(()=>location.href='login.html');
-    }catch(err){ Swal.fire('Error', err, 'error'); }
-  });
+    try {
+      const res = await api('verifyOtp', payload);
+      if (res.error) throw res.error;
+      Swal.fire('Success', res.msg, 'success').then(() => location.href = 'login.html');
+    } catch (err) {
+      Swal.fire('Error', err, 'error');
+    }
+  };
 </script>
 </body>
 </html>
